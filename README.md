@@ -1,6 +1,6 @@
 # ⚡PyInCharge - An unofficial Python library for controlling your Vattenfall InCharge charging stations 🔌
 
-_Because manually walking to your EV charger is so 2023_ 🚗💨
+_Because manually walking to your EV charger is so 2024_ 🚗💨
 
 Welcome to this unofficial, half-baked but working (on my machine) Python package for controlling your Vattenfall InCharge charging stations.
 In essence, this is a Python wrapper around the Vattenfall InCharge web application.
@@ -28,26 +28,16 @@ pip install -e .
 
 ## 🎮 Quick Start
 
-### Environment Setup
-
-Create a `.env` file or set these environment variables:
-
-```bash
-export USERNAME="your@email.com"
-export PASSWORD="your_super_secret_password"
-export STATION_NAME="EVB-P1234567"
-export RFID="12345AB6789C01"
-export SUBSCRIPTION_KEY="your_subscription_key_here"
-```
-
-### Python API Usage
+### Usage
 
 ```python
-import asyncio
-from vattenfall_charger import send_remote_start
+from py_incharge import InChargesend_remote_start
 
-# Charge your car like it's 2024
-asyncio.run(send_remote_start())
+client = InCharge(email="your@email.com", password="your_password", subscription_key="your_subscription_key")
+client.login()
+
+# Charge your car like it's 2025
+client.start_remote_transaction(station_name="EVB-12345678", rfid="123456abcdef")
 ```
 
 ## 🌟 How It Works

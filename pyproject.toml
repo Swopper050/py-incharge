@@ -32,7 +32,7 @@ classifiers = [
 dependencies = [
     "requests>=2.32.4",
     "selenium>=0.16.0",
-    "websockets>=15.0.1",
+    "websocket-client>=1.8.0",
 ]
 
 [project.optional-dependencies]
