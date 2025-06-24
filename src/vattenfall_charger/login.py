@@ -1,12 +1,11 @@
+import logging
 import time
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-import logging
 
 
 def find_element_through_shadow(driver, hosts_css_chain, leaf_css, timeout=5):
@@ -21,7 +20,9 @@ def find_element_through_shadow(driver, hosts_css_chain, leaf_css, timeout=5):
     wait = WebDriverWait(driver, timeout)
     root = driver
     for host_css in hosts_css_chain:
-        host = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, host_css)))
+        host = wait.until(
+            expected_conditions.presence_of_element_located((By.CSS_SELECTOR, host_css))
+        )
         root = host.shadow_root
 
     return root.find_element(By.CSS_SELECTOR, leaf_css)
