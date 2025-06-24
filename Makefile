@@ -9,10 +9,9 @@ pip: ## Update pip
 	pip install --upgrade pip
 
 deps_dev: pip ## Install development dependencies 
-	pip install -r requirements_dev.txt
+	pip install -e .[dev]
 
 deps_prod: pip ## Install production dependencies
-	pip install -r requirements.txt
 	pip install -e .
 
 deps: deps_prod deps_dev ## Install all dependencies
