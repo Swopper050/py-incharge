@@ -1,6 +1,11 @@
-# ⚡PyInCharge - An unofficial Python library for controlling your Vattenfall InCharge charging stations 🔌
+<p align="center">
+  <img src="https://raw.githubusercontent.com/yourusername/py-incharge/main/assets/pyincharge-logo.png" alt="PyInCharge Logo" width="300"/>
+</p>
 
-_Because manually walking to your EV charger is so 2024_ 🚗💨
+<h1 align="center">⚡ PyInCharge</h1>
+<p align="center"><em>An unofficial Python library for controlling your Vattenfall InCharge charging stations 🔌</em></p>
+
+<p align="center">Because manually walking to your EV charger is so 2024 🚗💨</p>
 
 Welcome to this unofficial, half-baked but working (on my machine) Python package for controlling your Vattenfall InCharge charging stations.
 In essence, this is a Python wrapper around the Vattenfall InCharge web application.
