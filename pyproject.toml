@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "py-incharge"
-version = "0.1.0"
+version = "0.1.4"
 description = "A Python package for remotely controlling Vattenfall EV charging stations"
 readme = "README.md"
 requires-python = ">=3.8"
