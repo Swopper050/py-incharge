@@ -3,9 +3,9 @@
 </p>
 
 <h1 align="center">⚡ PyInCharge</h1>
-<p align="center"><em>An unofficial Python library for controlling your Vattenfall InCharge charging stations 🔌</em></p>
+<p align="center">An unofficial Python library for controlling your Vattenfall InCharge charging stations 🔌</p>
 
-<p align="center">Because manually walking to your EV charger is so 2024 🚗💨</p>
+<p align="center"><em>Because manually walking to your EV charger is so 2024 🚗💨</em></p>
 
 Welcome to this unofficial, half-baked but working (on my machine) Python package for controlling your Vattenfall InCharge charging stations.
 In essence, this is a Python wrapper around the Vattenfall InCharge web application.
