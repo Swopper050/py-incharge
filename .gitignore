@@ -1,5 +1,4 @@
 # Secrets and environment
-*.env
 secrets.env
 
 # Python
