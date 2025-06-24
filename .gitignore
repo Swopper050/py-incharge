@@ -1,3 +1,20 @@
+# Secrets and environment
+*.env
 secrets.env
 
-__pycache__
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+
+# Selenium
+chromedriver
+*.log

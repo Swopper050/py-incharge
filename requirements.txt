@@ -1,0 +1,4 @@
+asyncio-websockets==3.0.2
+selenium>=4.15.0
+requests>=2.31.0
+websockets>=11.0.3
