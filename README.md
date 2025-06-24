@@ -31,8 +31,10 @@ pip install -e .
 ### Usage
 
 ```python
+import logging
 from py_incharge import InChargesend_remote_start
 
+# Optional: logging.basicConfig(level=logging.INFO)
 client = InCharge(email="your@email.com", password="your_password", subscription_key="your_subscription_key")
 client.login()
 

@@ -30,8 +30,17 @@ class InCharge:
         self.bearer_token: Optional[str] = None
 
     def login(self):
-        """Login and retrieve bearer token"""
-        logging.info("Starting login process...")
+        """
+        Login and retrieve bearer token. The bearer token is a token stored by the application in
+        the session storage after a successful login. It is used to authenticate API requests
+        and websocket connections.
+
+        This method uses Selenium to automate the login process by filling in the email and password fields
+        on the login page, submitting the form, and then retrieving the token from the session storage.
+
+        Note: This method requires the Chrome WebDriver to be installed and available in the system PATH.
+        """
+
         logging.info("Starting the login process to retrieve the bearer token...")
 
         options = webdriver.ChromeOptions()
@@ -43,7 +52,7 @@ class InCharge:
         driver.get("https://myincharge.vattenfall.com/")
 
         try:
-            logging.info("Filling in the login form...")
+            logging.info("Filling in email and password...")
             email_input = find_element_through_shadow(
                 driver,
                 hosts_css_chain=["ic-input[formcontrolname='username']"],
@@ -84,7 +93,12 @@ class InCharge:
             logging.info("Login successful, bearer token obtained")
 
     def get_ticket(self) -> str:
-        """Get ticket for websocket authentication"""
+        """
+        Before starting a remote transaction, a ticket ID must be obtained.
+        This ticket is used to authenticate the websocket connection and is required
+        to start a remote transaction. This function sends a POST request to the
+        InCharge API to obtain a ticket id.
+        """
         if not self.bearer_token:
             raise ValueError("Must login first before getting ticket")
 
@@ -104,7 +118,12 @@ class InCharge:
         return response.text.strip().strip('"')
 
     def get_remote_start_command_id(self, station_name: str) -> str:
-        """Get command ID for remote start transaction"""
+        """
+        Nobody knows why, but the command ID is not static and must be fetched
+        from the InCharge API every time before starting a remote transaction.
+        This function sends a GET request to the InCharge API to retrieve the command id
+        for the remote start transaction command for the specified station.
+        """
         if not self.bearer_token:
             raise ValueError("Must login first before getting command ID")
 
@@ -129,7 +148,13 @@ class InCharge:
     def start_remote_transaction(
         self, station_name: str, rfid: str, connector_id: int = 1
     ):
-        """Start a remote transaction on the specified station"""
+        """
+        In short: this method will turn on your EV charger.
+
+        This method starts a remote transaction on the specified station using the provided RFID and connector ID.
+        It first retrieves the command ID for the remote start transaction, then obtains a ticket ID,
+        and finally establishes a websocket connection to send the remote start command.
+        """
         if not self.bearer_token:
             raise ValueError("Must login first before starting transaction")
 
