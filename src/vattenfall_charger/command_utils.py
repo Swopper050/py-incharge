@@ -1,6 +1,6 @@
 import requests
 
-from consts import TICKET_URL, COMMAND_ID_URL
+from .consts import COMMAND_ID_URL, TICKET_URL
 
 
 def get_ticket(bearer_token: str, ocp_subscription_key: str) -> str:

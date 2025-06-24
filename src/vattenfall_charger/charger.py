@@ -1,18 +1,19 @@
 import asyncio
-import websockets
 import json
 import logging
 
-from consts import (
-    USERNAME,
+import websockets
+
+from .command_utils import get_command_id, get_ticket
+from .consts import (
     PASSWORD,
-    SUBSCRIPTION_KEY,
-    WEBSOCKET_URL,
-    STATION_NAME,
     RFID,
+    STATION_NAME,
+    SUBSCRIPTION_KEY,
+    USERNAME,
+    WEBSOCKET_URL,
 )
-from login import get_bearer_token
-from command_utils import get_command_id, get_ticket
+from .login import get_bearer_token
 
 
 async def send_remote_start():
@@ -58,5 +59,13 @@ async def send_remote_start():
                     break
 
 
-if __name__ == "__main__":
+def main():
+    """Console script entry point."""
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(send_remote_start())
+
+
+if __name__ == "__main__":
+    main()

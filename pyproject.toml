@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py-incharge"
+version = "0.1.0"
+description = "A Python package for remotely controlling Vattenfall EV charging stations"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Bram", email = "b.dewit@applyai.nl"}
+]
+maintainers = [
+    {name = "Bram", email = "b.dewit@applyai.nl"}
+]
+keywords = ["vattenfall", "incharge", "ev", "charger", "electric", "vehicle", "remote", "control", "websocket"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+
+[tool.ruff]
+line-length = 89
+indent-width =4 
+
+[tool.ruff.lint]
+select = [
+    # Pyflakes
+    "F",
+    # pycodestyle
+    "E4",
+    "E7",
+    "E9",
+    # isort
+    "I",
+    # pep8-naming
+    "N",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    # Allow using star imports in __init__.py modules for giving easy access to
+    # all exports defined in a package
+    "F401", "F403", "F405",
+]
