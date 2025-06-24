@@ -1,2 +1,2 @@
-pyright==4.13.2
+pyright==1.1.402
 ruff==0.12.0
