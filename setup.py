@@ -4,17 +4,19 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+    requirements = [
+        line.strip() for line in fh if line.strip() and not line.startswith("#")
+    ]
 
 setup(
-    name="vattenfall-charger",
+    name="py-incharge",
     version="0.1.0",
     author="Bram",
-    author_email="bram@example.com",
-    description="A Python package for remotely controlling Vattenfall EV charging stations",
+    author_email="b.dewit@applyai.nl",
+    description="Unofficial python library for remotely controlling your VattenFall InCharge charging stations",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/bram/vattenfall-charger",
+    url="https://github.com/Swopper050/py-incharge",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
@@ -35,22 +37,9 @@ setup(
     extras_require={
         "dev": [
             "ruff",
-            "black",
-            "pytest",
-            "pytest-asyncio",
-            "twine",
-            "build",
+            "pyright",
         ],
     },
-    entry_points={
-        "console_scripts": [
-            "vattenfall-charger=vattenfall_charger.charger:main",
-        ],
-    },
-    keywords="vattenfall ev charger electric vehicle remote control websocket",
-    project_urls={
-        "Bug Reports": "https://github.com/bram/vattenfall-charger/issues",
-        "Source": "https://github.com/bram/vattenfall-charger",
-        "Documentation": "https://github.com/bram/vattenfall-charger#readme",
-    },
+    keywords="vattenfall incharge ev charger electric vehicle remote control websocket",
 )
+

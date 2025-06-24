@@ -1,12 +1,12 @@
 """
-Vattenfall EV Charger Remote Control Package
+PyInCharge
 
-A Python package for remotely controlling Vattenfall EV charging stations.
+Unofficial python library for remotely controlling your VattenFall InCharge charging stations
 """
 
 __version__ = "0.1.0"
 __author__ = "Bram"
-__email__ = "bram@example.com"
+__email__ = "b.dewit@applyai.nl"
 
 from .charger import send_remote_start
 
