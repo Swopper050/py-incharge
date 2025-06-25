@@ -1,15 +1,16 @@
+import base64
 import enum
+import hashlib
 import json
 import logging
+import os
+import re
 import time
 from typing import Literal, Optional
+from urllib.parse import parse_qs, urlparse
 
 import requests
 import websocket
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-
-from py_incharge.utils import find_element_through_shadow
 
 
 class Command(enum.Enum):
@@ -34,6 +35,11 @@ class WebsocketMessageType(enum.Enum):
 class InCharge:
     AZURE_BASE_URL = "https://businessspecificapimanglobal.azure-api.net"
 
+    AUTHORIZATION_URL = "https://accounts.vattenfall.com/iamng/emob/oauth2/authorize"
+    TOKEN_URL = "https://accounts.vattenfall.com/iamng/emob/oauth2/token"
+    LOGIN_URL = "https://accounts.vattenfall.com/iamng/emob/commonauth"
+    LOGOUT_URL = f"{AZURE_BASE_URL}/jwt-invalidate/invalidate"
+
     TICKET_URL = f"{AZURE_BASE_URL}/remote-commands/editor/tickets"
     COMMAND_ID_URL = (
         f"{AZURE_BASE_URL}/remote-commands/publicCommands?stationName={{station_name}}"
@@ -41,14 +47,17 @@ class InCharge:
     WEBSOCKET_URL = (
         "wss://emobility-cloud.vattenfall.com/remote-commands/command-execution"
     )
-    LOGOUT_URL = (
-        "https://businessspecificapimanglobal.azure-api.net/jwt-invalidate/invalidate"
-    )
 
-    # These Ocp-Apim-Subscription-Key values are fixed and global, they are extracted manually
-    # by analyzing the headers of the network messages in the portal.
     REMOTE_COMMANDS_OCP_APIM_SUBSCRIPTION_KEY = "7685786eb9544d97923b0f01ac1b45d8"
     LOGOUT_OCP_APIM_SUBSCRIPTION_KEY = "15dd233179974ff6aa63dc8ae2499a1b"
+    """These Ocp-Apim-Subscription-Key values are fixed and global, they are extracted manually
+    by analyzing the headers of the network messages in the portal."""
+
+    CLIENT_ID = "Ac5BFlCwsq4AgqvwaqBYv5uVLpJV"
+    """Client ID, a static value that is used to identify the application."""
+
+    AUTHORIZATION_REDIRECT_URI = "https://myincharge.vattenfall.com?authType=customer"
+    """Redirect URI, a static value that is used to redirect the user after login."""
 
     def __init__(self, email: str, password: str):
         self.email = email
@@ -58,64 +67,118 @@ class InCharge:
 
     def login(self):
         """
-        Login and retrieve bearer token. The bearer token is a token stored by the application in
-        the session storage after a successful login. It is used to authenticate API requests
-        and websocket connections.
+        Login and retrieve bearer token.
 
-        This method uses Selenium to automate the login process by filling in the email and password fields
-        on the login page, submitting the form, and then retrieving the token from the session storage.
-
-        Note: This method requires the Chrome WebDriver to be installed and available in the system PATH.
+        This method performs the following steps:
+          1. Initiates a session and retrieves the authorization page.
+          2. Extracts the session data key from the authorization page.
+          3. Submits the login form with the user's credentials and session data key.
+          4. Follows the redirect to the landing page to obtain the authorization code.
+          5. Exchanges the authorization code for a bearer token.
+          6. Stores the bearer token for future API requests.
         """
 
         logging.info("Starting the login process to retrieve the bearer token...")
 
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--start-maximized")
+        session = requests.Session()
+        code_verifier, code_challenge = InCharge._get_pkce_pair()
 
-        logging.info("Waiting for the login page to load...")
-        driver = webdriver.Chrome(options=options)
-        driver.get("https://myincharge.vattenfall.com/")
+        auth_response = session.get(
+            InCharge.AUTHORIZATION_URL,
+            params={
+                "client_id": InCharge.CLIENT_ID,
+                "redirect_uri": InCharge.AUTHORIZATION_REDIRECT_URI,
+                "response_type": "code",
+                "response_mode": "query",
+                "scope": "openid profile email offline_access api",
+                "state": "incharge_state_string",
+                "code_challenge": code_challenge,
+                "code_challenge_method": "S256",
+                "tenantDomain": "int.incharge",
+                "relyingParty": InCharge.CLIENT_ID,
+                "sp": "ICSP",
+                "isSaaSApp": "false",
+                "authenticators": "EmobilityAuthenticator",
+                "type": "oidc",
+                "forceAuth": "false",
+                "passiveAuth": "false",
+                "commonAuthCallerPath": "/oauth2/authorize",
+            },
+        )
 
-        try:
-            logging.info("Filling in email and password...")
-            email_input = find_element_through_shadow(
-                driver,
-                hosts_css_chain=["ic-input[formcontrolname='username']"],
-                leaf_css="input",
+        qs = parse_qs(urlparse(auth_response.url).query).get("sessionDataKey")
+        if qs is None:
+            logging.error("Failed to find sessionDataKey in the authorization URL.")
+            raise ValueError("Failed to find sessionDataKey in the authorization URL.")
+
+        session_data_key = qs[0]
+
+        logging.info("Session data key found, proceeding with login...")
+
+        login_response = session.post(
+            InCharge.LOGIN_URL,
+            data={
+                "usernameInput": "int.incharge",
+                "username": f"INT.INCHARGE/{self.email}@int.incharge",
+                "password": self.password,
+                "sessionDataKey": session_data_key,
+                "tenantDomain": "int.incharge",
+                "captchaToken": "",
+            },
+            allow_redirects=False,
+        )
+
+        if login_response.status_code != 302:
+            logging.error(
+                f"Login failed with status code {login_response.status_code}: {login_response.text}"
             )
-            email_input.send_keys(self.email)
-            time.sleep(0.1)
-
-            password_input = find_element_through_shadow(
-                driver,
-                hosts_css_chain=["ic-input[formcontrolname='password']"],
-                leaf_css="input",
+            raise ValueError(
+                f"Failed to login to InCharge API: {login_response.status_code} - {login_response.text}"
             )
-            password_input.send_keys(self.password)
-            time.sleep(0.2)
 
-            logging.info("Submitting the login form...")
-            password_input.send_keys(Keys.RETURN)
-            time.sleep(3)
+        logging.info(
+            "Login successful, following redirect until we reach the landing page"
+        )
 
-            logging.info("Waiting for the page to load after login...")
-            for _ in range(10):
-                token = driver.execute_script(
-                    "return window.sessionStorage.getItem('auth_token');"
-                )
-                if token:
-                    logging.info("Bearer token found in session storage.")
-                    self.bearer_token = token
-                    return
+        redirect_response = session.get(
+            login_response.headers["Location"], allow_redirects=True
+        )
+        code_match = re.search(r"[?&]code=([^&]+)", redirect_response.url)
+        if not code_match:
+            logging.error("Auth-code not found after login.")
+            raise ValueError("Auth-code not found after login.")
 
-                time.sleep(1)
+        auth_code = code_match.group(1)
 
-            raise Exception("Token not found in session storage.")
-        finally:
-            driver.quit()
-            logging.info("Login successful, bearer token obtained")
+        logging.info("Auth-code found, proceeding to exchange it for a bearer token...")
+        token_response = session.post(
+            InCharge.TOKEN_URL,
+            data={
+                "grant_type": "authorization_code",
+                "code": auth_code,
+                "redirect_uri": InCharge.AUTHORIZATION_REDIRECT_URI,
+                "client_id": InCharge.CLIENT_ID,
+                "code_verifier": code_verifier,
+            },
+        )
+
+        if token_response.status_code != 200:
+            logging.error(
+                f"Token exchange failed: {token_response.status_code} - {token_response.text}"
+            )
+            raise ValueError(
+                f"Failed to exchange auth code for bearer token: {token_response.status_code} - {token_response.text}"
+            )
+
+        authorization_data = token_response.json()
+        bearer_token = authorization_data.get("id_token")
+
+        if bearer_token is None:
+            logging.error("Bearer token not found in authorization data.")
+            raise ValueError("Bearer token not found in authorization data.")
+
+        self.bearer_token = bearer_token
+        logging.info("Bearer token obtained successfully.")
 
     def logout(self):
         """Logout from the InCharge API by invalidating the session token."""
@@ -340,3 +403,14 @@ class InCharge:
                 return command_info["commandId"]
 
         raise ValueError(f"Command {command.name} not found")
+
+    @staticmethod
+    def _get_pkce_pair():
+        """Return (code_verifier, code_challenge) for PKCE S256."""
+        verifier = base64.urlsafe_b64encode(os.urandom(40)).rstrip(b"=").decode()
+        challenge = (
+            base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+            .rstrip(b"=")
+            .decode()
+        )
+        return verifier, challenge
