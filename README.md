@@ -12,10 +12,14 @@ In essence, this is a Python wrapper around the Vattenfall InCharge web applicat
 
 It is born out of the frustration of not being able to control my charging station via Home Assistant, so I set out to develop a Python package with which you at least have _some_ control over your station.
 
-Right now, it can't do a lot, but at least it has these features:
+Right now, it has these features:
 
-- **Selenium-Powered-Login**: Automates the login process in a not so neat but working way
+- **Automatic-Login**: Automates the login process in a not so neat but working way
 - **Remote Start**: Start charging your EV without leaving your computer
+- **Remote Stop**: Stop charging your EV without leaving your computer either
+- **Remote Unlock**: Automatically unlock your EV charging cable
+- **Set light intensity**: Useless but hey why not
+- **Reset**: Reset your charging station
 
 ## 🏗️ Installation
 
@@ -23,10 +27,7 @@ Right now, it can't do a lot, but at least it has these features:
 pip install py-incharge
 ```
 
-This package depends for login on `selenium`, which in turn requires a chrome-driver to be installed.
-Make sure you have such a driver installed. For more info, see the [installation docs](https://selenium-python.readthedocs.io/installation.html#drivers) of `selenium`.
-
-Or if you're feeling adventurous and want to build from source:
+Or from source:
 
 ```bash
 git clone https://github.com/Swopper050/py-incharge.git
@@ -50,7 +51,7 @@ logging.basicConfig(
 )
 
 client = InCharge(email="your@email.com", password="your_password")
-client.login()  # Required for other calls to work, takes about 5-10 seconds.
+client.login()  # Required for other calls to work
 
 # Charge your car like it's 2025
 client.start_transaction(station_name="EVB-12345678", rfid="123456abcdef")
@@ -74,6 +75,7 @@ In order to work with this library you need 4 things:
 2. Your password. Same.
 
 These are your credentials you use to login at the [Vattenvall InCharge portal](https://myincharge.vattenfall.com/):
+
 <p align="center">
   <img src="./static/incharge_login_page.png" alt="Vattenfall InCharge Login Page" width="50%"/>
 </p>
@@ -88,7 +90,7 @@ With these 4 variables (email, password, station name and RFID), you can use the
 
 ## 🌟 How It Works
 
-1. **Login**: Uses Selenium to authenticate with Vattenfall InCharge. The authentication token is inferred and used for subsequent calls. This is the only step that uses selenium.
+1. **Login**: Mimics the login flow to obtain a 'bearer token', used to authenticate further requests.
 2. **Send Commands**: Now you can send commands like `start_transaction(...)` or `unlock_connector(...)`. For every call roughly the following steps are executed:
 
    - A new ticket ID is requested.
