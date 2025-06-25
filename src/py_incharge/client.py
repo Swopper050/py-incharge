@@ -41,11 +41,18 @@ class InCharge:
     WEBSOCKET_URL = (
         "wss://emobility-cloud.vattenfall.com/remote-commands/command-execution"
     )
+    LOGOUT_URL = (
+        "https://businessspecificapimanglobal.azure-api.net/jwt-invalidate/invalidate"
+    )
 
-    def __init__(self, email: str, password: str, subscription_key: str):
+    # These Ocp-Apim-Subscription-Key values are fixed and global, they are extracted manually
+    # by analyzing the headers of the network messages in the portal.
+    REMOTE_COMMANDS_OCP_APIM_SUBSCRIPTION_KEY = "7685786eb9544d97923b0f01ac1b45d8"
+    LOGOUT_OCP_APIM_SUBSCRIPTION_KEY = "15dd233179974ff6aa63dc8ae2499a1b"
+
+    def __init__(self, email: str, password: str):
         self.email = email
         self.password = password
-        self.subscription_key = subscription_key
 
         self.bearer_token: Optional[str] = None
 
@@ -105,12 +112,31 @@ class InCharge:
 
                 time.sleep(1)
 
-            driver.quit()
-
             raise Exception("Token not found in session storage.")
         finally:
             driver.quit()
             logging.info("Login successful, bearer token obtained")
+
+    def logout(self):
+        """Logout from the InCharge API by invalidating the session token."""
+        response = requests.delete(
+            InCharge.LOGOUT_URL,
+            headers={
+                "Authorization": f"Bearer {self.bearer_token}",
+                "Ocp-Apim-Subscription-Key": InCharge.LOGOUT_OCP_APIM_SUBSCRIPTION_KEY,
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0",
+            },
+        )
+
+        if response.status_code == 200:
+            logging.info("Logout successful")
+            self.bearer_token = None
+            return
+
+        logging.error(f"Logout failed: {response.status_code} - {response.text}")
+        raise ValueError(
+            f"Failed to logout from InCharge API: {response.status_code} - {response.text}"
+        )
 
     @staticmethod
     def requires_login(method):
@@ -278,7 +304,7 @@ class InCharge:
             InCharge.TICKET_URL,
             headers={
                 "Authorization": f"Bearer {self.bearer_token}",
-                "Ocp-Apim-Subscription-Key": self.subscription_key,
+                "Ocp-Apim-Subscription-Key": InCharge.REMOTE_COMMANDS_OCP_APIM_SUBSCRIPTION_KEY,
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0",
             },
             json={},
@@ -301,7 +327,7 @@ class InCharge:
             InCharge.COMMAND_ID_URL.format(station_name=station_name),
             headers={
                 "Authorization": f"Bearer {self.bearer_token}",
-                "Ocp-Apim-Subscription-Key": self.subscription_key,
+                "Ocp-Apim-Subscription-Key": InCharge.REMOTE_COMMANDS_OCP_APIM_SUBSCRIPTION_KEY,
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0",
             },
         )
