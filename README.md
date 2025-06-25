@@ -24,7 +24,7 @@ pip install py-incharge
 ```
 
 This package depends for login on `selenium`, which in turn requires a chrome-driver to be installed.
-Make sure you have such a driver installed. For more info, see the [installation docs](https://selenium-python.readthedocs.io/installation.html#drivers){:target="\_blank"} of `selenium`.
+Make sure you have such a driver installed. For more info, see the [installation docs](https://selenium-python.readthedocs.io/installation.html#drivers) of `selenium`.
 
 Or if you're feeling adventurous and want to build from source:
 
@@ -73,8 +73,10 @@ In order to work with this library you need 4 things:
 1. Your email. I really hope you know this one.
 2. Your password. Same.
 
-These are your credentials you use to login at the [Vattenvall InCharge portal](https://myincharge.vattenfall.com/){:target="\_blank"}:
-![Vattenfall InCharge Login Page](./static/incharge_login_page.png)
+These are your credentials you use to login at the [Vattenvall InCharge portal](https://myincharge.vattenfall.com/):
+<p align="center">
+  <img src="./static/incharge_login_page.png" alt="Vattenfall InCharge Login Page" width="50%"/>
+</p>
 
 3. The name of your charging station, something like `EVB-P1234567`. After logging in to the portal you can find that here:
    ![Find station name](./static/find_station_name.png)
