@@ -39,8 +39,14 @@ pip install -e .
 import logging
 from py_incharge import InChargesend_remote_start
 
-# Optional: logging.basicConfig(level=logging.INFO)
-client = InCharge(email="your@email.com", password="your_password", subscription_key="your_subscription_key")
+# Optional, to see the logging and what's going on
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+client = InCharge(email="your@email.com", password="your_password")
 client.login()  # Required for other calls to work, takes about 5-10 seconds.
 
 # Charge your car like it's 2025
@@ -52,6 +58,9 @@ client.stop_transaction(station_name="EVB-12345678", transaction_id=1)
 client.set_light_intensity(station_name="EVB-12345678", "90")
 client.trigger_status_notification(station_name="EVB-12345678")
 client.reset(mode="Soft")  # Careful with this one
+
+# Logout to finish the session
+client.logout()
 ```
 
 ## 🌟 How It Works
