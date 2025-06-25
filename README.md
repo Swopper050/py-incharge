@@ -33,7 +33,7 @@ pip install -e .
 
 ## 🎮 Quick Start
 
-### Usage
+### Usage (commands)
 
 ```python
 import logging
@@ -41,25 +41,36 @@ from py_incharge import InChargesend_remote_start
 
 # Optional: logging.basicConfig(level=logging.INFO)
 client = InCharge(email="your@email.com", password="your_password", subscription_key="your_subscription_key")
-client.login()
+client.login()  # Required for other calls to work, takes about 5-10 seconds.
 
 # Charge your car like it's 2025
-client.start_remote_transaction(station_name="EVB-12345678", rfid="123456abcdef")
+client.start_transaction(station_name="EVB-12345678", rfid="123456abcdef")
+
+# Other commands
+client.unlock_connector(station_name="EVB-12345678")
+client.stop_transaction(station_name="EVB-12345678", transaction_id=1)
+client.set_light_intensity(station_name="EVB-12345678", "90")
+client.trigger_status_notification(station_name="EVB-12345678")
+client.reset(mode="Soft")  # Careful with this one
 ```
 
 ## 🌟 How It Works
 
-1. **Login**: Uses Selenium to authenticate with Vattenfall's portal
-2. **Get Tokens**: Retrieves bearer tokens and command IDs
-3. **WebSocket Connection**: Establishes a real-time connection
-4. **Send Commands**: Sends remote start commands to your charging station
-5. **Profit**: Your car starts charging! 🎉
+1. **Login**: Uses Selenium to authenticate with Vattenfall InCharge. The authentication token is inferred and used for subsequent calls. This is the only step that uses selenium.
+2. **Send Commands**: Now you can send commands like `start_transaction(...)` or `unlock_connector(...)`. For every call roughly the following steps are executed:
+
+   - A new ticket ID is requested.
+   - Via a websocket connection this ticket is validated.
+   - The command with specific parameters (`station_name`, `connector_id`, `transaction_id`, etc.) is send to the websocket.
+   - The reponse status is validated.
+
+3. **Profit**: Your car starts (or stops, or something else) charging! 🎉
 
 ## 🚨 Important Notes
 
 - **Chrome Required**: This package uses Chrome for authentication
 - **Credentials**: Keep your credentials safe and never commit them to version control
-- **Rate Limits**: Don't spam the API (be nice to the servers)
+- **Rate Limits**: Don't spam the API (be nice to the servers), especially take time between commands!
 - **Testing**: Always test in a safe environment first
 
 ## 🤝 Contributing

@@ -1,7 +1,8 @@
+import enum
 import json
 import logging
 import time
-from typing import Optional
+from typing import Literal, Optional
 
 import requests
 import websocket
@@ -9,6 +10,25 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
 from py_incharge.utils import find_element_through_shadow
+
+
+class Command(enum.Enum):
+    unlock_connector = "UnlockConnector"
+    start_transaction = "Remote start transaction"
+    stop_transaction = "Remote Stop Transaction"
+    set_light_intensity = "Set Light intensity"
+    change_availability = "Change availability"
+    reset = "Reset"
+    trigger_status_notification = "TriggerMessage StatusNotificat"
+
+
+class WebsocketMessageType(enum.Enum):
+    ticket_auth = "TICKET_AUTH"
+    custom_command = "CUSTOM_COMMAND"
+    response = "RESPONSE"
+    sent = "SENT"
+    ping = "PING"
+    error = "ERROR"
 
 
 class InCharge:
@@ -92,16 +112,168 @@ class InCharge:
             driver.quit()
             logging.info("Login successful, bearer token obtained")
 
-    def get_ticket(self) -> str:
+    @staticmethod
+    def requires_login(method):
+        """Decorator to ensure the user is logged in before executing a method."""
+
+        def wrapper(self, *args, **kwargs):
+            if not self.bearer_token:
+                raise ValueError("Must login first (call 'client.login()')")
+            return method(self, *args, **kwargs)
+
+        return wrapper
+
+    @requires_login
+    def unlock_connector(self, station_name, connector_id: int = 1):
+        """This will unlock your EV charger."""
+        return self._send_command_via_websocket(
+            self._get_command_id(station_name, Command.unlock_connector),
+            station_name,
+            {"example-number-parameter": connector_id},
+            expected_status="Unlocked",
+        )
+
+    @requires_login
+    def start_transaction(self, station_name: str, rfid: str, connector_id: int = 1):
+        """This will turn on your EV charger."""
+        return self._send_command_via_websocket(
+            self._get_command_id(station_name, Command.start_transaction),
+            station_name,
+            {"connectorId": connector_id, "idTag": rfid},
+            expected_status="Accepted",
+        )
+
+    @requires_login
+    def set_light_intensity(
+        self,
+        station_name: str,
+        intensity: Literal["0", "10", "25", "50", "75", "90", "100"],
+    ):
+        """This will set the light intensity of the EV charger."""
+        return self._send_command_via_websocket(
+            self._get_command_id(station_name, Command.set_light_intensity),
+            station_name,
+            {"example-enum-parameter": intensity},
+            expected_status="Accepted",
+        )
+
+    @requires_login
+    def stop_transaction(self, station_name: str, transaction_id: int = 1):
+        """This will turn off your EV charger."""
+        return self._send_command_via_websocket(
+            self._get_command_id(station_name, Command.stop_transaction),
+            station_name,
+            {"transactionId": transaction_id},
+            expected_status="Accepted",
+        )
+
+    @requires_login
+    def change_availability(
+        self,
+        station_name: str,
+        availability: Literal["Operative", "Inoperative"],
+        connector_id: int = 1,
+    ):
+        """This will change the availability of the EV charger."""
+        return self._send_command_via_websocket(
+            self._get_command_id(station_name, Command.change_availability),
+            station_name,
+            {"connectorId": connector_id, "availability": availability},
+            expected_status="Accepted",
+        )
+
+    @requires_login
+    def reset(self, station_name: str, mode: Literal["Soft", "Hard"] = "Soft"):
+        """This will reset the EV charger."""
+        return self._send_command_via_websocket(
+            self._get_command_id(station_name, Command.reset),
+            station_name,
+            {"typeOfReset": mode},
+            expected_status="Accepted",
+        )
+
+    @requires_login
+    def trigger_status_notification(self, station_name: str, connector_id: int = 1):
+        """This will trigger a status notification for the EV charger."""
+        return self._send_command_via_websocket(
+            self._get_command_id(station_name, Command.trigger_status_notification),
+            station_name,
+            {"connectorId": connector_id},
+            expected_status="Accepted",
+        )
+
+    @requires_login
+    def _send_command_via_websocket(
+        self, command_id: str, station_name: str, parameters: dict, expected_status: str
+    ) -> bool:
+        """
+        Sends a command via websocket to the InCharge API and waits for a response.
+        This method is used for various commands like unlocking a connector, starting a transaction, etc.
+        It also checks the response status to determine if the command was accepted or rejected.
+
+        It does the following:
+          1. Connects to the InCharge websocket server.
+          2. Requests a new ticket id.
+          3. Sends a ticket authentication message to the websocket.
+          4. Sends a custom command message with the specified command ID, station name, and parameters.
+          5. Waits for a response from the websocket and checks the status of the response.
+        """
+
+        logging.info("Connecting to websocket")
+        ws = websocket.create_connection(self.WEBSOCKET_URL)
+
+        try:
+            ticket_auth_msg = {
+                "type": WebsocketMessageType.ticket_auth.value,
+                "id": self._get_new_ticket_id(),
+            }
+            ws.send(json.dumps(ticket_auth_msg))
+
+            logging.info(f"Sent ticket authentication to websocket: {ticket_auth_msg}")
+            logging.info(f"Received message from websocket: {ws.recv()}")
+            time.sleep(1)
+
+            custom_command_msg = {
+                "type": WebsocketMessageType.custom_command.value,
+                "commandId": command_id,
+                "stations": [station_name],
+                "parameters": parameters,
+            }
+            ws.send(json.dumps(custom_command_msg))
+
+            logging.info(f"Sent command to websocket: {custom_command_msg}")
+
+            while True:
+                msg = ws.recv()
+                logging.info(f"Received message from websocket: {msg}")
+
+                msg_json = json.loads(msg)
+                if msg_json.get("type") == WebsocketMessageType.response.value:
+                    payload = json.loads(msg_json.get("payload", "{}"))
+
+                    status = payload.get("status")
+                    if status == expected_status:
+                        logging.info(f"Command accepted: {status}")
+                        return True
+                    elif status == "Rejected":
+                        logging.error(f"Command rejected: {status}")
+                        return False
+                elif msg_json.get("type") == WebsocketMessageType.error.value:
+                    logging.error(
+                        f"Error received from websocket: {msg_json.get('payload')}"
+                    )
+                    return False
+        finally:
+            ws.close()
+
+    @requires_login
+    def _get_new_ticket_id(self) -> str:
         """
         Before starting a remote transaction, a ticket ID must be obtained.
         This ticket is used to authenticate the websocket connection and is required
         to start a remote transaction. This function sends a POST request to the
         InCharge API to obtain a ticket id.
         """
-        if not self.bearer_token:
-            raise ValueError("Must login first before getting ticket")
-
         response = requests.post(
             InCharge.TICKET_URL,
             headers={
@@ -112,21 +284,19 @@ class InCharge:
             json={},
         )
         if response.status_code == 200:
-            print("Ticket request failed:", response.status_code, response.text)
+            logging.error("Ticket request failed:", response.status_code, response.text)
             raise ValueError("Failed to get ticket from API")
 
         return response.text.strip().strip('"')
 
-    def get_remote_start_command_id(self, station_name: str) -> str:
+    @requires_login
+    def _get_command_id(self, station_name: str, command: Command) -> str:
         """
         Nobody knows why, but the command ID is not static and must be fetched
         from the InCharge API every time before starting a remote transaction.
         This function sends a GET request to the InCharge API to retrieve the command id
         for the remote start transaction command for the specified station.
         """
-        if not self.bearer_token:
-            raise ValueError("Must login first before getting command ID")
-
         response = requests.get(
             InCharge.COMMAND_ID_URL.format(station_name=station_name),
             headers={
@@ -139,58 +309,8 @@ class InCharge:
             print("Command ID request failed:", response.status_code, response.text)
             raise ValueError("Failed to get command ID from API")
 
-        for command in response.json():
-            if command["details"]["name"] == "Remote start transaction":
-                return command["commandId"]
+        for command_info in response.json():
+            if command_info["details"]["name"] == command.value:
+                return command_info["commandId"]
 
-        raise ValueError("Remote start transaction command not found")
-
-    def start_remote_transaction(
-        self, station_name: str, rfid: str, connector_id: int = 1
-    ):
-        """
-        In short: this method will turn on your EV charger.
-
-        This method starts a remote transaction on the specified station using the provided RFID and connector ID.
-        It first retrieves the command ID for the remote start transaction, then obtains a ticket ID,
-        and finally establishes a websocket connection to send the remote start command.
-        """
-        if not self.bearer_token:
-            raise ValueError("Must login first before starting transaction")
-
-        logging.info("Starting remote transaction...")
-        command_id = self.get_remote_start_command_id(station_name)
-        ticket_id = self.get_ticket()
-
-        ws = websocket.create_connection(InCharge.WEBSOCKET_URL)
-
-        ticket_auth_msg = {"type": "TICKET_AUTH", "id": ticket_id}
-        ws.send(json.dumps(ticket_auth_msg))
-        logging.info(f"Sent TICKET_AUTH: {ticket_auth_msg}")
-
-        response = ws.recv()
-        logging.info(f"Received: {response}")
-
-        time.sleep(1)
-
-        custom_command_msg = {
-            "type": "CUSTOM_COMMAND",
-            "commandId": command_id,
-            "stations": [station_name],
-            "parameters": {"connectorId": connector_id, "idTag": rfid},
-        }
-        ws.send(json.dumps(custom_command_msg))
-        logging.info(f"Sent CUSTOM_COMMAND: {custom_command_msg}")
-
-        while True:
-            msg = ws.recv()
-            logging.info(f"Received: {msg}")
-            msg_json = json.loads(msg)
-            if msg_json.get("type") == "RESPONSE":
-                payload = json.loads(msg_json.get("payload", "{}"))
-                if payload.get("status") == "Accepted":
-                    logging.info("Remote start accepted.")
-                    return True
-                elif payload.get("status") == "Rejected":
-                    logging.error("Remote start rejected.")
-                    return False
+        raise ValueError(f"Command {command.name} not found")
