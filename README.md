@@ -23,6 +23,9 @@ Right now, it can't do a lot, but at least it has these features:
 pip install py-incharge
 ```
 
+This package depends for login on `selenium`, which in turn requires a chrome-driver to be installed.
+Make sure you have such a driver installed. For more info, see the [installation docs](https://selenium-python.readthedocs.io/installation.html#drivers){:target="\_blank"} of `selenium`.
+
 Or if you're feeling adventurous and want to build from source:
 
 ```bash
@@ -70,13 +73,13 @@ In order to work with this library you need 4 things:
 1. Your email. I really hope you know this one.
 2. Your password. Same.
 
-These are your credentials you use to login at the [Vattenvall InCharge portal](https://myincharge.vattenfall.com/):
+These are your credentials you use to login at the [Vattenvall InCharge portal](https://myincharge.vattenfall.com/){:target="\_blank"}:
 ![Vattenfall InCharge Login Page](./static/incharge_login_page.png)
 
-3. The name of your charging station. After logging in to the portal you can find that here:
+3. The name of your charging station, something like `EVB-P1234567`. After logging in to the portal you can find that here:
    ![Find station name](./static/find_station_name.png)
 
-4. The RFID of your charging card. The RFID is something like '12345AB12345C67' (not the same as your card number, which is something like for example 'NL-NUO-A01234567-A'). You can your RFID here:
+4. The RFID of your charging card. The RFID is something like `12345AB12345C67` (not the same as your card number, which is something like for example `NL-NUO-A01234567-A`). You can your RFID here:
    ![Find RFID](./static/find_rfid.png)
 
 With these 4 variables (email, password, station name and RFID), you can use the package!
